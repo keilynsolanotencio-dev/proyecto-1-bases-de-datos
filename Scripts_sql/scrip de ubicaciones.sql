@@ -105,6 +105,7 @@ FOR EACH ROW EXECUTE FUNCTION evitar_ciclo_categorias();
 
 
 -------------ACTUALIZACIONES Y CREACIÓN DE NUEVOS MÓDULOS:------------------
+--Modulo de ubicaciones:
 SET search_path TO prototipo, public;
 
 --Gestión y Registro de Ubicaciones (RF-08)
@@ -128,3 +129,29 @@ FROM ubicaciones u
 LEFT JOIN eventos e ON e.id_ubicacion = u.id_ubicacion
 GROUP BY u.id_ubicacion, u.nombre
 ORDER BY total_eventos DESC;
+
+--Modulo de Disponibilidad
+SET search_path TO prototipo, public;
+
+--Catálogo de tipos de disponibilidad (RF-11)
+CREATE TABLE tipos_disponibilidad (
+    id_tipo SERIAL PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL UNIQUE
+);
+
+INSERT INTO tipos_disponibilidad (nombre) VALUES
+    ('disponible'), ('ocupado'), ('no disponible');
+
+--Franjas de disponibilidad por usuario (RF-11)
+CREATE TABLE disponibilidades (
+    id_disponibilidad SERIAL PRIMARY KEY,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario),
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    id_tipo INT NOT NULL REFERENCES tipos_disponibilidad(id_tipo),
+    CONSTRAINT check_horas_disponibilidad CHECK (hora_fin > hora_inicio)
+);
+
+
+
