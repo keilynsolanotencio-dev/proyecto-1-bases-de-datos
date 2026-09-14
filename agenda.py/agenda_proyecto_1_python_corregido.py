@@ -606,7 +606,12 @@ class AppAgenda(ctk.CTk):
         ctk.CTkLabel(form, text="Categoría").pack(anchor="w", padx=10, pady=(8, 2)) 
         self.combo_ev_categoria = ctk.CTkComboBox(form, values=["Seleccione una categoría"], state="readonly") 
         self.combo_ev_categoria.set("Seleccione una categoría") 
-        self.combo_ev_categoria.pack(fill="x", padx=10, pady=4) 
+        self.combo_ev_categoria.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Ubicación").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_ev_ubicacion = ctk.CTkComboBox(form, values=["Sin ubicación"], state="readonly")
+        self.combo_ev_ubicacion.set("Sin ubicación")
+        self.combo_ev_ubicacion.pack(fill="x", padx=10, pady=4)
  
         ctk.CTkLabel(form, text="Inicio").pack(anchor="w", padx=10, pady=(10, 2)) 
         fila_inicio = ctk.CTkFrame(form, fg_color="transparent"); fila_inicio.pack(fill="x", padx=10) 
@@ -680,7 +685,9 @@ class AppAgenda(ctk.CTk):
     def datos_evento_formulario(self): 
         titulo = self.entry_ev_titulo.get().strip() 
         usuario = self.usuarios_combo.get(self.combo_ev_usuario.get()) 
-        categoria = self.categorias_combo.get(self.combo_ev_categoria.get()) 
+        categoria = self.categorias_combo.get(self.combo_ev_categoria.get())
+        valor_ubi = self.combo_ev_ubicacion.get()
+        ubicacion = None if valor_ubi == "Sin ubicación" else self.ubicaciones_combo.get(valor_ubi) 
         try: 
             inicio = datetime.strptime(f"{self.obtener_fecha(self.fecha_inicio)} {self.hora_inicio.get().strip()}", "%Y-%m-%d %H:%M") 
             fin = datetime.strptime(f"{self.obtener_fecha(self.fecha_fin)} {self.hora_fin.get().strip()}", "%Y-%m-%d %H:%M") 
@@ -689,16 +696,25 @@ class AppAgenda(ctk.CTk):
         if not titulo or usuario is None or categoria is None: 
             raise ValueError("Completa título, propietario y categoría.") 
         if fin <= inicio: 
-            raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.") 
-        return usuario, categoria, titulo, inicio, fin 
+            raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.")
+        if ubicacion is not None:
+            choques = self.ejecutar_consulta(
+                "SELECT id_evento FROM eventos WHERE id_ubicacion=%s AND (fecha_inicio, fecha_fin) OVERLAPS (%s, %s)",
+                (ubicacion, inicio, fin), fetch=True
+            )
+            eid_actual = self.evento_seleccionado_id()
+            choques_reales = [c for c in choques if c[0] != eid_actual]
+            if choques_reales:
+                raise ValueError("Ya existe otro evento en esa ubicación en ese horario.") 
+        return usuario, categoria, titulo, inicio, fin, ubicacion 
  
     def agregar_evento(self): 
         try: 
             datos = self.datos_evento_formulario() 
             self.ejecutar_consulta(""" 
                 INSERT INTO eventos 
-                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin) 
-                VALUES (%s, %s, %s, %s, %s) 
+                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin, id_ubicacio) 
+                VALUES (%s, %s, %s, %s, %s, %s) 
             """, datos) 
             self.limpiar_form_evento(); self.cargar_datos_eventos() 
             messagebox.showinfo("Éxito", "Evento creado correctamente.") 
@@ -709,11 +725,11 @@ class AppAgenda(ctk.CTk):
         eid = self.evento_seleccionado_id() 
         if eid is None: return messagebox.showwarning("Selección requerida", "Selecciona un evento.") 
         try: 
-            usuario, categoria, titulo, inicio, fin = self.datos_evento_formulario() 
+            usuario, categoria, titulo, inicio, fin, ubicacion = self.datos_evento_formulario() 
             self.ejecutar_consulta(""" 
                 UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s, 
-                titulo=%s, fecha_inicio=%s, fecha_fin=%s WHERE id_evento=%s 
-            """, (usuario, categoria, titulo, inicio, fin, eid)) 
+                titulo=%s, fecha_inicio=%s, fecha_fin=%s, id_ubicacion=%s WHERE id_evento=%s 
+            """, (usuario, categoria, titulo, inicio, fin, ubicacion, eid)) 
             self.cargar_datos_eventos(); messagebox.showinfo("Éxito", "Evento actualizado.") 
         except Exception as e: 
             messagebox.showerror("No se pudo actualizar", str(e)) 
