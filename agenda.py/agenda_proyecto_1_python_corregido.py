@@ -32,7 +32,11 @@ class AppAgenda(ctk.CTk):
  
         self.usuarios_combo = {} 
         self.categorias_combo = {} 
-        self.categorias_padre_combo = {} 
+        self.categorias_padre_combo = {}
+        self.ubicaciones_combo ={}
+        self.tipos_disponibilidad_combo ={}
+        self.eventos_combo ={}
+
  
         self.grid_rowconfigure(0, weight=1) 
         self.grid_columnconfigure(1, weight=1) 
@@ -129,7 +133,10 @@ class AppAgenda(ctk.CTk):
         for i, (nombre, icono) in enumerate([ 
             ("Usuarios", "👥"), 
             ("Categorías", "📁"), 
-            ("Eventos", "📆"), 
+            ("Eventos", "📆"),
+            ("Ubicaciones", "📍"),
+            ("Disponibilidad", "🤝"),
+            ("Tareas", "✅"), 
         ], start=2): 
             btn = ctk.CTkButton( 
                 self.sidebar_frame, text=f"{icono}  {nombre}", 
@@ -143,10 +150,9 @@ class AppAgenda(ctk.CTk):
             self.sidebar_frame, 
             text="🔄Recargar datos", 
             command=self.actualizar_todas_las_tablas 
-        ).grid(row=5, column=0, padx=15, pady=(20, 5), sticky="ew") 
+        ).grid(row=8, column=0, padx=15, pady=(20, 5), sticky="ew") 
  
-        ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, 
-weight="bold")).grid( 
+        ctk.CTkLabel(self.sidebar_frame, text="APARIENCIA", font=ctk.CTkFont(size=11, weight="bold")).grid( 
             row=11, column=0, padx=20, pady=(10, 5), sticky="w" 
         ) 
         self.option_mode = ctk.CTkOptionMenu( 
@@ -168,11 +174,17 @@ weight="bold")).grid(
  
         self.tab_usuarios = self.tabview.add("Usuarios") 
         self.tab_categorias = self.tabview.add("Categorías") 
-        self.tab_eventos = self.tabview.add("Eventos") 
+        self.tab_eventos = self.tabview.add("Eventos")
+        self.tab_ubicaciones = self.tabview.add("Ubicaciones")
+        self.tab_disponibilidad = self.tabview.add("Disponibilidad")
+        self.tab_tareas = self.tabview.add("Tareas") 
  
         self.configurar_pestana_usuarios() 
         self.configurar_pestana_categorias() 
-        self.configurar_pestana_eventos() 
+        self.configurar_pestana_eventos()
+        self.configurar_pestana_ubicaciones()
+        self.configurar_pestana_disponibilidad()
+        self.configurar_pestana_tareas() 
         self.seleccionar_modulo("Usuarios") 
  
     def al_cambiar_pestana(self): 
@@ -189,6 +201,19 @@ weight="bold")).grid(
             anchor="w", padx=15, pady=(0, 12) 
         ) 
  
+        # -------------------- HELPER DE REPORTES --------------------
+
+    def mostrar_reporte(self, titulo, columnas, anchos, filas):
+        ventana = ctk.CTkToplevel(self)
+        ventana.title(titulo)
+        ventana.geometry("700x400")
+        ctk.CTkLabel(ventana, text=titulo, font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(15, 5))
+        tree = self.crear_treeview(ventana, columnas, anchos)
+        for fila in filas:
+            tree.insert("", "end", values=fila)
+        ventana.transient(self)
+        ventana.grab_set()
+
     # -------------------- USUARIOS -------------------- 
  
     def configurar_pestana_usuarios(self): 
@@ -211,8 +236,7 @@ weight="bold")).grid(
         ) 
         self.tree_usuarios.bind("<<TreeviewSelect>>", self.cargar_usuario_seleccionado) 
  
-        ctk.CTkLabel(form, text="Formulario de usuario", font=ctk.CTkFont(size=16, 
-weight="bold")).pack(pady=(10, 15)) 
+        ctk.CTkLabel(form, text="Formulario de usuario", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15)) 
         self.entry_nombre = ctk.CTkEntry(form, placeholder_text="Nombre") 
         self.entry_nombre.pack(fill="x", padx=10, pady=6) 
         self.entry_apellido = ctk.CTkEntry(form, placeholder_text="Apellido") 
@@ -222,14 +246,10 @@ weight="bold")).pack(pady=(10, 15))
         self.switch_usuario_activo.select() 
         self.switch_usuario_activo.pack(anchor="w", padx=12, pady=10) 
  
-        ctk.CTkButton(form, text="➕Registrar usuario", 
-command=self.agregar_usuario).pack(fill="x", padx=10, pady=(12, 5)) 
-        ctk.CTkButton(form, text="💾Actualizar seleccionado", 
-command=self.actualizar_usuario).pack(fill="x", padx=10, pady=5) 
-        ctk.CTkButton(form, text="🧹Nuevo / Limpiar", command=self.limpiar_form_usuario, 
-fg_color="gray").pack(fill="x", padx=10, pady=5) 
-        ctk.CTkButton(form, text="🗑Eliminar seleccionado", command=self.eliminar_usuario, 
-fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="➕Registrar usuario", command=self.agregar_usuario).pack(fill="x", padx=10, pady=(12, 5)) 
+        ctk.CTkButton(form, text="💾Actualizar seleccionado", command=self.actualizar_usuario).pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🧹Nuevo / Limpiar", command=self.limpiar_form_usuario, fg_color="gray").pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🗑Eliminar seleccionado", command=self.eliminar_usuario, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5) 
  
     def usuario_seleccionado_id(self): 
         sel = self.tree_usuarios.selection() 
@@ -319,32 +339,24 @@ fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
         cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1) 
  
         tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8)) 
-        form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, 
-sticky="nsew") 
+        form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, sticky="nsew") 
  
-        self.tree_categorias = self.crear_treeview(tabla, ("ID", "Categoría", "Categoría padre"), (80, 
-230, 230)) 
+        self.tree_categorias = self.crear_treeview(tabla, ("ID", "Categoría", "Categoría padre"), (80, 230, 230)) 
         self.tree_categorias.bind("<<TreeviewSelect>>", self.cargar_categoria_seleccionada) 
  
-        ctk.CTkLabel(form, text="Formulario de categoría", font=ctk.CTkFont(size=16, 
-weight="bold")).pack(pady=(10, 15)) 
+        ctk.CTkLabel(form, text="Formulario de categoría", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15)) 
         self.entry_cat_nombre = ctk.CTkEntry(form, placeholder_text="Nombre de la categoría") 
         self.entry_cat_nombre.pack(fill="x", padx=10, pady=6) 
  
         ctk.CTkLabel(form, text="Categoría padre").pack(anchor="w", padx=10, pady=(10, 2)) 
-        self.combo_cat_padre = ctk.CTkComboBox(form, values=["Sin categoría padre"], 
-state="readonly") 
+        self.combo_cat_padre = ctk.CTkComboBox(form, values=["Sin categoría padre"], state="readonly") 
         self.combo_cat_padre.set("Sin categoría padre") 
         self.combo_cat_padre.pack(fill="x", padx=10, pady=6) 
  
-        ctk.CTkButton(form, text="➕Crear categoría", 
-command=self.agregar_categoria).pack(fill="x", padx=10, pady=(15, 5)) 
-        ctk.CTkButton(form, text="💾Actualizar seleccionada", 
-command=self.actualizar_categoria).pack(fill="x", padx=10, pady=5) 
-        ctk.CTkButton(form, text="🧹Nueva / Limpiar", command=self.limpiar_form_categoria, 
-fg_color="gray").pack(fill="x", padx=10, pady=5) 
-        ctk.CTkButton(form, text="🗑Eliminar seleccionada", command=self.eliminar_categoria, 
-fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="➕Crear categoría", command=self.agregar_categoria).pack(fill="x", padx=10, pady=(15, 5)) 
+        ctk.CTkButton(form, text="💾Actualizar seleccionada", command=self.actualizar_categoria).pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🧹Nueva / Limpiar", command=self.limpiar_form_categoria, fg_color="gray").pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🗑Eliminar seleccionada", command=self.eliminar_categoria, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5) 
  
     def categoria_seleccionada_id(self): 
         sel = self.tree_categorias.selection() 
@@ -433,6 +445,135 @@ fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
                 self.combo_cat_padre.set("Sin categoría padre") 
         except Exception as e: 
             print(f"Error cargando categorías: {e}") 
+
+    #--------------------UBICACIONES-------------------
+        def configurar_pestana_ubicaciones(self): 
+            self.crear_encabezado(self.tab_ubicaciones, "Ubicaciones", "Administra los lugaren donde se van a hacer los enevtos") 
+ 
+        cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent") 
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5) 
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1) 
+ 
+        tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8)) 
+        form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, sticky="nsew") 
+ 
+        self.tree_ubicaciones = self.crear_treeview(tabla, ("ID", "Nombre", "Dirección", "Ciudad", "Capaciodad"), (80, 230, 230, 120, 90)) 
+        self.tree_ubicaciones.bind("<<TreeviewSelect>>", self.cargar_ubicacion_seleccionada) 
+ 
+        ctk.CTkLabel(form, text="Formulario de ubicación", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15)) 
+        self.entry_ubi_nombre = ctk.CTkEntry(form, placeholder_text="Nombre de la ubicación") 
+        self.entry_ubi_nombre.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_direccion = ctk.CTkEntry(form, placeholder_text="Dirección")
+        self.entry_ubi_direccion.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_ciudad = ctk.CTkEntry(form, placeholder_text="Ciudad")
+        self.entry_ubi_ciudad.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_capacidad = ctk.CTkEntry(form, placeholder_text="Capacidad (número)")
+        self.entry_ubi_capacidad.pack(fill="x", padx=10, pady=6) 
+ 
+        ctk.CTkButton(form, text="➕Registrar Ubicación", command=self.agregar_categoria).pack(fill="x", padx=10, pady=(15, 5)) 
+        ctk.CTkButton(form, text="💾Actualizar seleccionada", command=self.actualizar_categoria).pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🧹Nueva / Limpiar", command=self.limpiar_form_categoria, fg_color="gray").pack(fill="x", padx=10, pady=5) 
+        ctk.CTkButton(form, text="🗑Eliminar seleccionada", command=self.eliminar_categoria, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5) 
+ 
+    def ubicacion_seleccionada_id(self): 
+        sel = self.tree_ubicaciones.selection() 
+        return self.tree_ubicaciones.item(sel[0])["values"][0] if sel else None 
+ 
+    def cargar_ubicacion_seleccionada(self, _=None): 
+        sel = self.tree_ubicaciones.selection() 
+        if not sel: return 
+        vals = self.tree_ubicaciones.item(sel[0])["values"] 
+        self.entry_ubi_nombre.delete(0, tk.END); self.entry_cat_nombre.insert(0, vals[1])
+        self.entry_ubi_direccion.delete(0, tk.END); self.entry_ubi_direccion.insert(0, vals[2])
+        self.entry_ubi_ciudad.delete(0, tk.END); self.entry_ubi_ciudad.insert(0, vals[3])
+        self.entry_ubi_capacidad.delete(0, tk.END); self.entry_ubi_capacidad.insert(0, vals[4]) 
+       
+    def limpiar_form_ubicacion(self): 
+        self.tree_ubicaciones.selection_remove(self.tree_categorias.selection()) 
+        for e in (self.entry_ubi_nombre, self.entry_ubi_direccion, self.entry_ubi_ciudad, self.entry_ubi_capacidad):
+            e.delete(0, tk.END) 
+ 
+    def datos_ubicacion_formulario(self):
+        nombre = self.entry_ubi_nombre.get().strip()
+        direccion = self.entry_ubi_direccion.get().strip()
+        ciudad = self.entry_ubi_ciudad.get().strip()
+        capacidad_txt = self.entry_ubi_capacidad.get().strip()
+        if not nombre or not direccion or not ciudad or not capacidad_txt:
+            raise ValueError("Completa todos los campos de la ubicación.")
+        try:
+            capacidad = int(capacidad_txt)
+        except ValueError:
+            raise ValueError("La capacidad debe ser un número entero.")
+        if capacidad <= 0:
+            raise ValueError("La capacidad debe ser mayor a cero.")
+        return nombre, direccion, ciudad, capacidad
+    
+    def agregar_ubicacion(self): 
+        try:
+            datos = self.datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "INSERT INTO ubicaciones (nombre, direccion, ciudad, capacidad) VALUES (%s, %s, %s, %s)",
+                datos
+            )
+            self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Ubicación registrada correctamente.")
+        except Exception as e:
+            messagebox.showerror("No se pudo registrar", str(e))
+
+    def actualizar_ubicacion(self): 
+        uid = self.ubicacion_seleccionada_id() 
+        if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicación.") 
+        try: 
+            nombre, direccion, ciudad, capacidad = self.datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "UPDATE ubicaciones SET nombre=%s, direccion=%s, ciudad=%s, capacidad=%s WHERE id_ubicacion=%s",
+                (nombre, direccion, ciudad, capacidad, uid)
+            )
+            self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Ubicación actualizada.")
+        except Exception as e:
+            messagebox.showerror("No se pudo actualizar", str(e))
+
+    def eliminar_ubicacion(self): 
+        uid = self.categoria_seleccionada_id() 
+        if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicación.") 
+        if not messagebox.askyesno("Confirmar", "¿Eliminar la ubicación seleccionada?"): return 
+        try: 
+            self.ejecutar_consulta("DELETE FROM ubicaciones WHERE id_ubicacion=%s", (uid,)) 
+            self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas() 
+            messagebox.showinfo("Eliminado", "Ubicación eliminada.") 
+        except Exception as e: 
+            messagebox.showerror("No se pudo eliminar", str(e)) 
+ 
+    def cargar_datos_categorias(self): 
+        try: 
+            rows = self.ejecutar_consulta( 
+                "SELECT id_ubicacion, nombre, direccion, ciudad, capacidad FROM ubicaciones ORDER BY nombre",
+                fetch=True)
+ 
+            for item in self.tree_ubicaciones.get_children(): self.tree_ubicaciones.delete(item)
+            self.ubicaciones_combo = {}
+            for row in rows:
+                self.tree_ubicaciones.insert("", "end", values=row)
+                etiqueta = f"{row[1]} — #{row[0]}"
+                self.ubicaciones_combo[etiqueta] = row[0]
+            # refresca el combobox de ubicación dentro de la pestaña de Eventos
+            valores_ubi = ["Sin ubicación"] + list(self.ubicaciones_combo.keys())
+            if hasattr(self, "combo_ev_ubicacion"):
+                self.combo_ev_ubicacion.configure(values=valores_ubi)
+        except Exception as e:
+            print(f"Error cargando ubicaciones: {e}")
+
+    def ver_ranking_ubicaciones(self):
+        try:
+            rows = self.ejecutar_consulta("SELECT * FROM vista_ranking_ubicaciones", fetch=True)
+            self.mostrar_reporte(
+                "Ranking de ocupación de ubicaciones",
+                ("ID", "Nombre", "Total de eventos"),
+                (70, 220, 140),
+                rows
+            )
+        except Exception as e:
+            messagebox.showerror("No se pudo generar el reporte", str(e)) 
  
     # -------------------- EVENTOS -------------------- 
  
@@ -499,8 +640,7 @@ fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
         return widget.get().strip() 
  
     def establecer_fecha(self, widget, valor): 
-        fecha = valor.date() if hasattr(valor, "date") else datetime.strptime(str(valor)[:10], 
-"%Y-%m-%d").date() 
+        fecha = valor.date() if hasattr(valor, "date") else datetime.strptime(str(valor)[:10], "%Y-%m-%d").date() 
         if DateEntry is not None: 
             widget.set_date(fecha) 
         else: 
