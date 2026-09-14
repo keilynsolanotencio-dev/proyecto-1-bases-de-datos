@@ -130,6 +130,14 @@ LEFT JOIN eventos e ON e.id_ubicacion = u.id_ubicacion
 GROUP BY u.id_ubicacion, u.nombre
 ORDER BY total_eventos DESC;
 
+
+-- Consulta de choque de horario en una ubicación (se usa desde la app antes de insertar)
+SELECT * FROM eventos
+WHERE id_ubicacion = %s
+  AND (fecha_inicio, fecha_fin) OVERLAPS (%s, %s);
+
+
+  
 --Modulo de Disponibilidad
 SET search_path TO prototipo, public;
 
@@ -178,4 +186,4 @@ COUNT (*) FILTER (WHERE estado != 'Completado' AND fecha_limite < CURRENT_DATE) 
 FROM tareas
 GROUP BY id_usuario_responsable;
 
-
+SELECT * FROM usuarios;
