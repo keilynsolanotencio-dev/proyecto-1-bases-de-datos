@@ -445,155 +445,141 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando categorías: {e}")
 
-      # -----------------UBICACIONES------------------------
-            def configurar_pestana_ubicaciones(self):
-                self.crear_encabezado(self.tab_ubicaciones, "Ubicaciones", "Gestiona las Ubicaciones disponibles para realizar los eventos")
-    
-                cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent")
-                cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
-                cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1)
-    
-                tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-                form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, sticky="nsew")
-    
-                self.tree_ubicaciones = self.crear_treeview(tabla, ("ID", "Nombre", "Direccion", "Ciudad", "Capacidad"), (80, 230, 230, 120, 90)) #
-                self.tree_ubicaciones.bind("<<TreeviewSelect>>", self.cargar_ubicacion_seleccionada)
-    
-                ctk.CTkLabel(form, text="Formulario de ubicación", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15))
-                self.entry_ubi_nombre = ctk.CTkEntry(form, placeholder_text="Nombre del recinto/salon")
-                self.entry_ubi_nombre.pack(fill="x", padx=10, pady=6)
-                self.entry_ubi_direccion = ctk.CTkEntry(form, placeholder_text="Dirección")
-                self.entry_ubi_direccion.pack(fill="x", padx=10, pady=6)
-                self.entry_ubi_ciudad = ctk.CTkEntry(form, placeholder_text="Ciudad")
-                self.entry_ubi_ciudad.pack(fill="x", padx=10, pady=6)
-                self.entry_ubi_capacidad = ctk.CTkEntry(form, placeholder_text="Capacidad (número)")
-                self.entry_ubi_capacidad.pack(fill="x", padx=10, pady=6)
-    
-                ctk.CTkButton(form, text="➕ Registrar Ubicacion", command=self.agregar_categoria).pack(fill="x", padx=10, pady=(15, 5))
-                ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_categoria).pack(fill="x", padx=10, pady=5)
-                ctk.CTkButton(form, text="🧹 Nueva / Limpiar", command=self.limpiar_form_categoria, fg_color="gray").pack(fill="x", padx=10, pady=5)
-                ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_categoria, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
-                ctk.CTkButton(form, text="📊 Ver ranking de ocupación", command=self.ver_ranking_ubicaciones, fg_color="#2e7d32", hover_color="#1b5e20").pack(fill="x", padx=10, pady=(20, 5))
-    
-        def ubicacion_seleccionada_id(self):
-            sel = self.tree_ubicaciones.selection()
-            return self.tree_ubicaciones.item(sel[0])["values"][0] if sel else None
-    
-        def cargar_ubicacion_seleccionada(self, _=None):
-            sel = self.tree_ubicaciones.selection()
-            if not sel: return
-            vals = self.tree_ubicaciones.item(sel[0])["values"]
-            self.entry_ubi_nombre.delete(0, tk.END); self.entry_cat_nombre.insert(0, vals[1])
-            self.entry_ubi_direccion.delete(0, tk.END); self.entry_ubi_direccion.insert(0, vals[2])
-            self.entry_ubi_ciudad.delete(0, tk.END); self.entry_ubi_ciudad.insert(0, vals[3])
-            self.entry_ubi_capacidad.delete(0, tk.END); self.entry_ubi_capacidad.insert(0, vals[4])
-            
-        def limpiar_form_ubicaciones(self):
-            self.tree_ubicaciones.selection_remove(self.tree_categorias.selection())
-            for e in (self.entry_ubi_nombre, self.entry_ubi_direccion, self.entry_ubi_ciudad, self.entry_ubi_capacidad):
-                e.delete(0, tk.END)
-    
-        def datos_ubicacion_formulario(self):
-            nombre = self.entry_ubi_nombre.get().strip()
-            direccion = self.entry_ubi_direccion.get().strip()
-            ciudad = self.entry_ubi_ciudad.get().strip()
-            capacidad_txt = self.entry_ubi_capacidad.get().strip()
-            if not nombre or not direccion or not ciudad or not capacidad_txt:
-                raise ValueError("Completa todos los campos de la ubicación.")
-            try:
-                capacidad = int(capacidad_txt)
-            except ValueError:
-                raise ValueError("La capacidad debe ser un número entero.")
-            if capacidad <= 0:
-                raise ValueError("La capacidad debe ser mayor a cero.")
-            return nombre, direccion, ciudad, capacidad
-    
-    
-        def agregar_ubicaciones(self):
-            try:
-                datos = self.datos_ubicacion_formulario()
-                self.ejecutar_consulta(
-                    "INSERT INTO ubicaciones (nombre, direccion, ciudad, capacidad) VALUES (%s, %s, %s, %s)",
-                    datos
-                )
-                self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
-                messagebox.showinfo("Éxito", "Ubicación registrada correctamente.")
-            except Exception as e:
-                messagebox.showerror("No se pudo registrar", str(e))
-    
-        def actualizar_ubicacion(self):
-            uid = self.ubicacion_seleccionada_id_seleccionada_id()
-            if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicacion")
-            
-            try:
-                nombre, direccion, ciudad, capacidad = self.datos_ubicacion_formulario()
-                self.ejecutar_consulta(
-                    "UPDATE ubicaciones SET nombre=%s, direccion=%s, ciudad=%s, capacidad=%s WHERE id_ubicacion=%s",
-                    (nombre, direccion, ciudad, capacidad, uid)
-                )
-                self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Ubicación actualizada.")
-            except Exception as e:
-                messagebox.showerror("No se pudo actualizar", str(e))
-    
-        def eliminar_ubicacion(self):
-            uid = self.ubicacion_seleccionada_id()
-            if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicacion")
-            if not messagebox.askyesno("Confirmar", "¿Eliminar la ubicacion seleccionada?"): return
-            try:
-                self.ejecutar_consulta("DELETE FROM ubicaciones WHERE id_ubicacion=%s", (uid,))
-                self.limpiar_form_ubicaciones(); self.actualizar_todas_las_tablas()
-                messagebox.showinfo("Eliminado", "Ubicación eliminada.")
-            except Exception as e:
-                messagebox.showerror("No se pudo eliminar", str(e))
-    
-        def cargar_datos_ubicaciones(self):
-            try:
-                rows = self.ejecutar_consulta(
-                    "SELECT id_ubicacion, nombre, direccion, ciudad, capacidad FROM ubicaciones ORDER BY nombre",
-                    fetch=True
-                )
-    
-                for item in self.tree_ubicaciones.get_children(): self.tree_ubicaciones.delete(item)
-                self.ubicaciones_combo = {}
-                for row in rows:
-                    self.tree_ubicaciones.insert("", "end", values=row)
-                    etiqueta = f"{row[1]} — #{row[0]}"
-                    self.ubicaciones_combo[etiqueta] = row[0]
-                # refresca el combobox de ubicación dentro de la pestaña de Eventos
-                valores_ubi = ["Sin ubicación"] + list(self.ubicaciones_combo.keys())
-                if hasattr(self, "combo_ev_ubicacion"):
-                    self.combo_ev_ubicacion.configure(values=valores_ubi)
-            except Exception as e:
-                print(f"Error cargando ubicaciones: {e}")
-    
-        def ver_ranking_ubicaciones(self):
-            try:
-                rows = self.ejecutar_consulta("SELECT * FROM vista_ranking_ubicaciones", fetch=True)
-                self.mostrar_reporte(
-                    "Ranking de ocupación de ubicaciones",
-                    ("ID", "Nombre", "Total de eventos"),
-                    (70, 220, 140),
-                    rows
-                )
-            except Exception as e:
-                messagebox.showerror("No se pudo generar el reporte", str(e))
-    
+    # -----------------UBICACIONES------------------------
+
+    def configurar_pestana_ubicaciones(self):
+        self.crear_encabezado(self.tab_ubicaciones, "Ubicaciones", "Gestiona las Ubicaciones disponibles para realizar los eventos")
+
+        cuerpo = ctk.CTkFrame(self.tab_ubicaciones, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=320); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_ubicaciones = self.crear_treeview(tabla, ("ID", "Nombre", "Direccion", "Ciudad", "Capacidad"), (80, 230, 230, 120, 90))
+        self.tree_ubicaciones.bind("<<TreeviewSelect>>", self.cargar_ubicacion_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de ubicación", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15))
+        self.entry_ubi_nombre = ctk.CTkEntry(form, placeholder_text="Nombre del recinto/salon")
+        self.entry_ubi_nombre.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_direccion = ctk.CTkEntry(form, placeholder_text="Dirección")
+        self.entry_ubi_direccion.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_ciudad = ctk.CTkEntry(form, placeholder_text="Ciudad")
+        self.entry_ubi_ciudad.pack(fill="x", padx=10, pady=6)
+        self.entry_ubi_capacidad = ctk.CTkEntry(form, placeholder_text="Capacidad (número)")
+        self.entry_ubi_capacidad.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkButton(form, text="➕ Registrar Ubicacion", command=self.agregar_ubicacion).pack(fill="x", padx=10, pady=(15, 5))
+        ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_ubicacion).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🧹 Nueva / Limpiar", command=self.limpiar_form_ubicacion, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_ubicacion, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="📊 Ver ranking de ocupación", command=self.ver_ranking_ubicaciones, fg_color="#2e7d32", hover_color="#1b5e20").pack(fill="x", padx=10, pady=(20, 5))
+
+    def ubicacion_seleccionada_id(self):
+        sel = self.tree_ubicaciones.selection()
+        return self.tree_ubicaciones.item(sel[0])["values"][0] if sel else None
+
+    def cargar_ubicacion_seleccionada(self, _=None):
+        sel = self.tree_ubicaciones.selection()
+        if not sel: return
+        vals = self.tree_ubicaciones.item(sel[0])["values"]
+        self.entry_ubi_nombre.delete(0, tk.END); self.entry_ubi_nombre.insert(0, vals[1])
+        self.entry_ubi_direccion.delete(0, tk.END); self.entry_ubi_direccion.insert(0, vals[2])
+        self.entry_ubi_ciudad.delete(0, tk.END); self.entry_ubi_ciudad.insert(0, vals[3])
+        self.entry_ubi_capacidad.delete(0, tk.END); self.entry_ubi_capacidad.insert(0, vals[4])
+
+    def limpiar_form_ubicacion(self):
+        self.tree_ubicaciones.selection_remove(self.tree_ubicaciones.selection())
+        for e in (self.entry_ubi_nombre, self.entry_ubi_direccion, self.entry_ubi_ciudad, self.entry_ubi_capacidad):
+            e.delete(0, tk.END)
+
+    def datos_ubicacion_formulario(self):
+        nombre = self.entry_ubi_nombre.get().strip()
+        direccion = self.entry_ubi_direccion.get().strip()
+        ciudad = self.entry_ubi_ciudad.get().strip()
+        capacidad_txt = self.entry_ubi_capacidad.get().strip()
+        if not nombre or not direccion or not ciudad or not capacidad_txt:
+            raise ValueError("Completa todos los campos de la ubicación.")
+        try:
+            capacidad = int(capacidad_txt)
+        except ValueError:
+            raise ValueError("La capacidad debe ser un número entero.")
+        if capacidad <= 0:
+            raise ValueError("La capacidad debe ser mayor a cero.")
+        return nombre, direccion, ciudad, capacidad
+
+    def agregar_ubicacion(self):
+        try:
+            datos = self.datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "INSERT INTO ubicaciones (nombre, direccion, ciudad, capacidad) VALUES (%s, %s, %s, %s)",
+                datos
+            )
+            self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Éxito", "Ubicación registrada correctamente.")
+        except Exception as e:
+            messagebox.showerror("No se pudo registrar", str(e))
+
+    def actualizar_ubicacion(self):
+        uid = self.ubicacion_seleccionada_id()
+        if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicacion")
+        try:
+            nombre, direccion, ciudad, capacidad = self.datos_ubicacion_formulario()
+            self.ejecutar_consulta(
+                "UPDATE ubicaciones SET nombre=%s, direccion=%s, ciudad=%s, capacidad=%s WHERE id_ubicacion=%s",
+                (nombre, direccion, ciudad, capacidad, uid)
+            )
+            self.actualizar_todas_las_tablas(); messagebox.showinfo("Éxito", "Ubicación actualizada.")
+        except Exception as e:
+            messagebox.showerror("No se pudo actualizar", str(e))
+
+    def eliminar_ubicacion(self):
+        uid = self.ubicacion_seleccionada_id()
+        if uid is None: return messagebox.showwarning("Selección requerida", "Selecciona una ubicacion")
+        if not messagebox.askyesno("Confirmar", "¿Eliminar la ubicacion seleccionada?"): return
+        try:
+            self.ejecutar_consulta("DELETE FROM ubicaciones WHERE id_ubicacion=%s", (uid,))
+            self.limpiar_form_ubicacion(); self.actualizar_todas_las_tablas()
+            messagebox.showinfo("Eliminado", "Ubicación eliminada.")
+        except Exception as e:
+            messagebox.showerror("No se pudo eliminar", str(e))
+
+    def cargar_datos_ubicaciones(self):
+        try:
+            rows = self.ejecutar_consulta(
+                "SELECT id_ubicacion, nombre, direccion, ciudad, capacidad FROM ubicaciones ORDER BY nombre",
+                fetch=True
+            )
+            for item in self.tree_ubicaciones.get_children(): self.tree_ubicaciones.delete(item)
+            self.ubicaciones_combo = {}
+            for row in rows:
+                self.tree_ubicaciones.insert("", "end", values=row)
+                etiqueta = f"{row[1]} — #{row[0]}"
+                self.ubicaciones_combo[etiqueta] = row[0]
+            # refresca el combobox de ubicación dentro de la pestaña de Eventos
+            valores_ubi = ["Sin ubicación"] + list(self.ubicaciones_combo.keys())
+            if hasattr(self, "combo_ev_ubicacion"):
+                self.combo_ev_ubicacion.configure(values=valores_ubi)
+        except Exception as e:
+            print(f"Error cargando ubicaciones: {e}")
+
+    def ver_ranking_ubicaciones(self):
+        try:
+            rows = self.ejecutar_consulta("SELECT * FROM vista_ranking_ubicaciones", fetch=True)
+            self.mostrar_reporte(
+                "Ranking de ocupación de ubicaciones",
+                ("ID", "Nombre", "Total de eventos"),
+                (70, 220, 140),
+                rows
+            )
+        except Exception as e:
+            messagebox.showerror("No se pudo generar el reporte", str(e))
 
     # -------------------- EVENTOS --------------------
 
     def configurar_pestana_eventos(self):
         self.crear_encabezado(self.tab_eventos, "Eventos", "Programa eventos seleccionando usuarios, categorías, fechas y horas.")
-        ctk.CTkLabel(form, text="Categoría").pack(anchor="w", padx=10, pady=(8, 2))
-        self.combo_ev_categoria = ctk.CTkComboBox(form, values=["Seleccione una categoría"], state="readonly")
-        self.combo_ev_categoria.set("Seleccione una categoría")
-        self.combo_ev_categoria.pack(fill="x", padx=10, pady=4)
-
-        #RF-09------------
-        ctk.CTkLabel(form, text="Ubicación").pack(anchor="w", padx=10, pady=(8, 2))
-        self.combo_ev_ubicacion = ctk.CTkComboBox(form, values=["Sin ubicación"], state="readonly")
-        self.combo_ev_ubicacion.set("Sin ubicación")
-        self.combo_ev_ubicacion.pack(fill="x", padx=10, pady=4)
-        #RF-09------------
 
         cuerpo = ctk.CTkFrame(self.tab_eventos, fg_color="transparent")
         cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
@@ -622,6 +608,13 @@ class AppAgenda(ctk.CTk):
         self.combo_ev_categoria = ctk.CTkComboBox(form, values=["Seleccione una categoría"], state="readonly")
         self.combo_ev_categoria.set("Seleccione una categoría")
         self.combo_ev_categoria.pack(fill="x", padx=10, pady=4)
+
+        #RF-09------------
+        ctk.CTkLabel(form, text="Ubicación").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_ev_ubicacion = ctk.CTkComboBox(form, values=["Sin ubicación"], state="readonly")
+        self.combo_ev_ubicacion.set("Sin ubicación")
+        self.combo_ev_ubicacion.pack(fill="x", padx=10, pady=4)
+        #RF-09------------
 
         ctk.CTkLabel(form, text="Inicio").pack(anchor="w", padx=10, pady=(10, 2))
         fila_inicio = ctk.CTkFrame(form, fg_color="transparent"); fila_inicio.pack(fill="x", padx=10)
@@ -692,39 +685,39 @@ class AppAgenda(ctk.CTk):
         self.hora_inicio.delete(0, tk.END); self.hora_inicio.insert(0, "09:00")
         self.hora_fin.delete(0, tk.END); self.hora_fin.insert(0, "10:00")
 
-        def datos_evento_formulario(self):
-            titulo = self.entry_ev_titulo.get().strip()
-            usuario = self.usuarios_combo.get(self.combo_ev_usuario.get())
-            categoria = self.categorias_combo.get(self.combo_ev_categoria.get())
-            valor_ubi = self.combo_ev_ubicacion.get()
-            ubicacion = None if valor_ubi == "Sin ubicación" else self.ubicaciones_combo.get(valor_ubi)
-            try:
-                inicio = datetime.strptime(f"{self.obtener_fecha(self.fecha_inicio)} {self.hora_inicio.get().strip()}", "%Y-%m-%d %H:%M")
-                fin = datetime.strptime(f"{self.obtener_fecha(self.fecha_fin)} {self.hora_fin.get().strip()}", "%Y-%m-%d %H:%M")
-            except ValueError:
-                raise ValueError("La hora debe tener formato HH:MM, por ejemplo 09:30.")
-            if not titulo or usuario is None or categoria is None:
-                raise ValueError("Completa título, propietario y categoría.")
-            if fin <= inicio:
-                raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.")
-            if ubicacion is not None:
-                choques = self.ejecutar_consulta(
-                    "SELECT id_evento FROM eventos WHERE id_ubicacion=%s AND (fecha_inicio, fecha_fin) OVERLAPS (%s, %s)",
-                    (ubicacion, inicio, fin), fetch=True
-                )
-                eid_actual = self.evento_seleccionado_id()
-                choques_reales = [c for c in choques if c[0] != eid_actual]
-                if choques_reales:
-                    raise ValueError("Ya existe otro evento en esa ubicación en ese horario.")
-            return usuario, categoria, titulo, inicio, fin, ubicacion
-    
+    def datos_evento_formulario(self):
+        titulo = self.entry_ev_titulo.get().strip()
+        usuario = self.usuarios_combo.get(self.combo_ev_usuario.get())
+        categoria = self.categorias_combo.get(self.combo_ev_categoria.get())
+        valor_ubi = self.combo_ev_ubicacion.get()
+        ubicacion = None if valor_ubi == "Sin ubicación" else self.ubicaciones_combo.get(valor_ubi)
+        try:
+            inicio = datetime.strptime(f"{self.obtener_fecha(self.fecha_inicio)} {self.hora_inicio.get().strip()}", "%Y-%m-%d %H:%M")
+            fin = datetime.strptime(f"{self.obtener_fecha(self.fecha_fin)} {self.hora_fin.get().strip()}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("La hora debe tener formato HH:MM, por ejemplo 09:30.")
+        if not titulo or usuario is None or categoria is None:
+            raise ValueError("Completa título, propietario y categoría.")
+        if fin <= inicio:
+            raise ValueError("La fecha y hora de finalización deben ser posteriores al inicio.")
+        if ubicacion is not None:
+            choques = self.ejecutar_consulta(
+                "SELECT id_evento FROM eventos WHERE id_ubicacion=%s AND (fecha_inicio, fecha_fin) OVERLAPS (%s, %s)",
+                (ubicacion, inicio, fin), fetch=True
+            )
+            eid_actual = self.evento_seleccionado_id()
+            choques_reales = [c for c in choques if c[0] != eid_actual]
+            if choques_reales:
+                raise ValueError("Ya existe otro evento en esa ubicación en ese horario.")
+        return usuario, categoria, titulo, inicio, fin, ubicacion
+
     def agregar_evento(self):
         try:
             datos = self.datos_evento_formulario()
             self.ejecutar_consulta("""
                 INSERT INTO eventos
                 (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin, id_ubicacion)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, datos)
             self.limpiar_form_evento(); self.cargar_datos_eventos()
             messagebox.showinfo("Éxito", "Evento creado correctamente.")
@@ -738,7 +731,7 @@ class AppAgenda(ctk.CTk):
             usuario, categoria, titulo, inicio, fin, ubicacion = self.datos_evento_formulario()
             self.ejecutar_consulta("""
                 UPDATE eventos SET id_usuario_propietario=%s, id_categoria=%s,
-                titulo=%s, fecha_inicio=%s, fecha_fin=%s, id_ubicaciones=%s WHERE id_evento=%s
+                titulo=%s, fecha_inicio=%s, fecha_fin=%s, id_ubicacion=%s WHERE id_evento=%s
             """, (usuario, categoria, titulo, inicio, fin, ubicacion, eid))
             self.cargar_datos_eventos(); messagebox.showinfo("Éxito", "Evento actualizado.")
         except Exception as e:
