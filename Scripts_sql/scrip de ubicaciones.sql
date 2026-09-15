@@ -179,11 +179,15 @@ CREATE TABLE tareas (
 );
 
 --Vista de carga de trabajo por usuario (RF-16 y RF-17)
-CREATE VIEW visita_carga_trabajo AS
-SELECT id_usuario_responsable, 
-COUNT (*) FILTER (WHERE estado IN ('Prendiente', 'En progreso')) AS tareas_activas,
-COUNT (*) FILTER (WHERE estado != 'Completado' AND fecha_limite < CURRENT_DATE) AS tareas_vencidas
+SET search_path TO prototipo, public;
+
+CREATE VIEW vista_carga_trabajo AS
+SELECT
+    id_usuario_responsable,
+    COUNT(*) FILTER (WHERE estado IN ('Pendiente', 'En progreso')) AS tareas_activas,
+    COUNT(*) FILTER (WHERE estado != 'Completada' AND fecha_limite < CURRENT_DATE) AS tareas_vencidas
 FROM tareas
 GROUP BY id_usuario_responsable;
 
-SELECT * FROM usuarios;
+SET search_path TO prototipo, public;
+SELECT * FROM tareas;
