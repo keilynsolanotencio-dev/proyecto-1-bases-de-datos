@@ -948,13 +948,185 @@ class AppAgenda(ctk.CTk):
                 messagebox.showerror("No se pudo buscar", str(e))
 
         ctk.CTkButton(ventana, text="Buscar", command=ejecutar_busqueda).pack(pady=15)
+
+        # --------------------TAREAS--------------------
+
+    def configurar_pestana_tareas(self):
+        self.crear_encabezado(self.tab_tareas, "Tareas", "Da seguimiento a las tareas asociadas a cada evento.")
+
+        cuerpo = ctk.CTkFrame(self.tab_tareas, fg_color="transparent")
+        cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
+        cuerpo.grid_columnconfigure(0, weight=3); cuerpo.grid_columnconfigure(1, weight=1); cuerpo.grid_rowconfigure(0, weight=1)
+
+        tabla = ctk.CTkFrame(cuerpo); tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        form = ctk.CTkScrollableFrame(cuerpo, width=340); form.grid(row=0, column=1, sticky="nsew")
+
+        self.tree_tareas = self.crear_treeview(
+            tabla, ("ID", "Evento", "Responsable", "Título", "Prioridad", "Límite", "Estado"),
+            (60, 160, 140, 160, 90, 100, 100)
+        )
+        self.tree_tareas.bind("<<TreeviewSelect>>", self.cargar_tarea_seleccionada)
+
+        ctk.CTkLabel(form, text="Formulario de tarea", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 15))
+
+        ctk.CTkLabel(form, text="Evento").pack(anchor="w", padx=10, pady=(0, 2))
+        self.combo_tarea_evento = ctk.CTkComboBox(form, values=["Seleccione un evento"], state="readonly")
+        self.combo_tarea_evento.set("Seleccione un evento")
+        self.combo_tarea_evento.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Responsable").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_usuario = ctk.CTkComboBox(form, values=["Seleccione un usuario"], state="readonly")
+        self.combo_tarea_usuario.set("Seleccione un usuario")
+        self.combo_tarea_usuario.pack(fill="x", padx=10, pady=4)
+
+        self.entry_tarea_titulo = ctk.CTkEntry(form, placeholder_text="Título de la tarea")
+        self.entry_tarea_titulo.pack(fill="x", padx=10, pady=(10, 6))
+        self.entry_tarea_desc = ctk.CTkEntry(form, placeholder_text="Descripción (opcional)")
+        self.entry_tarea_desc.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkLabel(form, text="Prioridad").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_prioridad = ctk.CTkComboBox(form, values=["baja", "media", "alta"], state="readonly")
+        self.combo_tarea_prioridad.set("media")
+        self.combo_tarea_prioridad.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Fecha límite").pack(anchor="w", padx=10, pady=(8, 2))
+        self.fecha_tarea_limite = self.crear_selector_fecha(form)
+        self.fecha_tarea_limite.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkLabel(form, text="Estado").pack(anchor="w", padx=10, pady=(8, 2))
+        self.combo_tarea_estado = ctk.CTkComboBox(
+            form, values=["Pendiente", "En progreso", "Completada", "Cancelada"], state="readonly"
+        )
+        self.combo_tarea_estado.set("Pendiente")
+        self.combo_tarea_estado.pack(fill="x", padx=10, pady=4)
+
+        ctk.CTkButton(form, text="➕ Crear tarea", command=self.agregar_tarea).pack(fill="x", padx=10, pady=(15, 5))
+        ctk.CTkButton(form, text="💾 Actualizar seleccionada", command=self.actualizar_tarea).pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🧹 Nueva / Limpiar", command=self.limpiar_form_tarea, fg_color="gray").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_tarea, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
+        ctk.CTkButton(form, text="📊 Ver carga de trabajo", command=self.ver_carga_trabajo, fg_color="#2e7d32", hover_color="#1b5e20").pack(fill="x", padx=10, pady=(20, 5))
+
+    def tarea_seleccionada_id(self):
+        sel = self.tree_tareas.selection()
+        return self.tree_tareas.item(sel[0])["values"][0] if sel else None
+
+    def cargar_tarea_seleccionada(self, _=None):
+        sel = self.tree_tareas.selection()
+        if not sel: return
+        vals = self.tree_tareas.item(sel[0])["values"]
+        self.combo_tarea_evento.set(vals[1])
+        self.combo_tarea_usuario.set(vals[2])
+        self.entry_tarea_titulo.delete(0, tk.END); self.entry_tarea_titulo.insert(0, vals[3])
+        self.combo_tarea_prioridad.set(vals[4])
+        self.establecer_fecha(self.fecha_tarea_limite, datetime.strptime(str(vals[5]), "%Y-%m-%d"))
+        self.combo_tarea_estado.set(vals[6])
+
+    def limpiar_form_tarea(self):
+        self.tree_tareas.selection_remove(self.tree_tareas.selection())
+        self.combo_tarea_evento.set("Seleccione un evento")
+        self.combo_tarea_usuario.set("Seleccione un usuario")
+        self.entry_tarea_titulo.delete(0, tk.END); self.entry_tarea_desc.delete(0, tk.END)
+        self.combo_tarea_prioridad.set("media")
+        self.establecer_fecha(self.fecha_tarea_limite, datetime.now())
+        self.combo_tarea_estado.set("Pendiente")
+
+    def datos_tarea_formulario(self):
+        evento = self.eventos_combo.get(self.combo_tarea_evento.get())
+        usuario = self.usuarios_combo.get(self.combo_tarea_usuario.get())
+        titulo = self.entry_tarea_titulo.get().strip()
+        descripcion = self.entry_tarea_desc.get().strip()
+        prioridad = self.combo_tarea_prioridad.get()
+        limite = self.obtener_fecha(self.fecha_tarea_limite)
+        estado = self.combo_tarea_estado.get()
+        if evento is None or usuario is None or not titulo:
+            raise ValueError("Selecciona evento, responsable e indica el título.")
+        return evento, usuario, titulo, descripcion, prioridad, limite, estado
+
+    def agregar_tarea(self):
+        try:
+            datos = self.datos_tarea_formulario()
+            self.ejecutar_consulta("""
+                INSERT INTO tareas (id_evento, id_usuario_responsable, titulo, descripcion, prioridad, fecha_limite, estado)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, datos)
+            self.limpiar_form_tarea(); self.cargar_datos_tareas()
+            messagebox.showinfo("Éxito", "Tarea creada correctamente.")
+        except Exception as e:
+            messagebox.showerror("No se pudo crear la tarea", str(e))
+
+    def actualizar_tarea(self):
+        tid = self.tarea_seleccionada_id()
+        if tid is None: return messagebox.showwarning("Selección requerida", "Selecciona una tarea.")
+        try:
+            evento, usuario, titulo, descripcion, prioridad, limite, estado = self.datos_tarea_formulario()
+            self.ejecutar_consulta("""
+                UPDATE tareas SET id_evento=%s, id_usuario_responsable=%s, titulo=%s,
+                descripcion=%s, prioridad=%s, fecha_limite=%s, estado=%s WHERE id_tarea=%s
+            """, (evento, usuario, titulo, descripcion, prioridad, limite, estado, tid))
+            self.cargar_datos_tareas(); messagebox.showinfo("Éxito", "Tarea actualizada.")
+        except Exception as e:
+            messagebox.showerror("No se pudo actualizar", str(e))
+
+    def eliminar_tarea(self):
+        tid = self.tarea_seleccionada_id()
+        if tid is None: return messagebox.showwarning("Selección requerida", "Selecciona una tarea.")
+        if not messagebox.askyesno("Confirmar", "¿Eliminar la tarea seleccionada?"): return
+        try:
+            self.ejecutar_consulta("DELETE FROM tareas WHERE id_tarea=%s", (tid,))
+            self.limpiar_form_tarea(); self.cargar_datos_tareas()
+            messagebox.showinfo("Eliminado", "Tarea eliminada.")
+        except Exception as e:
+            messagebox.showerror("No se pudo eliminar", str(e))
+
+    def cargar_datos_tareas(self):
+        try:
+            eventos = self.ejecutar_consulta("SELECT id_evento, titulo FROM eventos ORDER BY titulo", fetch=True)
+            self.eventos_combo = {f"{t} — #{eid}": eid for eid, t in eventos}
+            self.combo_tarea_evento.configure(values=["Seleccione un evento"] + list(self.eventos_combo.keys()))
+
+            self.combo_tarea_usuario.configure(values=["Seleccione un usuario"] + list(self.usuarios_combo.keys()))
+
+            rows = self.ejecutar_consulta("""
+                SELECT ta.id_tarea, e.titulo, u.nombre || ' ' || u.apellido,
+                       ta.titulo, ta.prioridad, ta.fecha_limite, ta.estado
+                FROM tareas ta
+                JOIN eventos e ON e.id_evento = ta.id_evento
+                JOIN usuarios u ON u.id_usuario = ta.id_usuario_responsable
+                ORDER BY ta.fecha_limite
+            """, fetch=True)
+            for item in self.tree_tareas.get_children(): self.tree_tareas.delete(item)
+            for row in rows:
+                self.tree_tareas.insert("", "end", values=row)
+        except Exception as e:
+            print(f"Error cargando tareas: {e}")
+
+    def ver_carga_trabajo(self):
+        try:
+            rows = self.ejecutar_consulta("""
+                SELECT u.nombre || ' ' || u.apellido, c.tareas_activas, c.tareas_vencidas
+                FROM vista_carga_trabajo c
+                JOIN usuarios u ON u.id_usuario = c.id_usuario_responsable
+                ORDER BY c.tareas_vencidas DESC, c.tareas_activas DESC
+            """, fetch=True)
+            self.mostrar_reporte(
+                "Carga de trabajo por usuario",
+                ("Usuario", "Tareas activas", "Tareas vencidas"),
+                (200, 130, 130),
+                rows
+            )
+        except Exception as e:
+            messagebox.showerror("No se pudo generar el reporte", str(e))
  
     # -------------------- REFRESCO GENERAL -------------------- 
  
     def actualizar_todas_las_tablas(self): 
         self.cargar_datos_usuarios() 
         self.cargar_datos_categorias() 
-        self.cargar_datos_eventos() 
+        self.cargar_datos_eventos()
+        self.cargar_datos_ubicaciones()
+        self.cargar_datos_eventos()
+        self.cargar_datos_disponibilidades()
+        self.cargar_datos_tareas() 
  
  
 if __name__ == "__main__": 
