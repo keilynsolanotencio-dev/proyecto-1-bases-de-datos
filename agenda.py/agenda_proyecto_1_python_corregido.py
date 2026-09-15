@@ -714,7 +714,7 @@ class AppAgenda(ctk.CTk):
             datos = self.datos_evento_formulario() 
             self.ejecutar_consulta(""" 
                 INSERT INTO eventos 
-                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin, id_ubicacio) 
+                (id_usuario_propietario, id_categoria, titulo, fecha_inicio, fecha_fin, id_ubicacion) 
                 VALUES (%s, %s, %s, %s, %s, %s) 
             """, datos) 
             self.limpiar_form_evento(); self.cargar_datos_eventos() 
